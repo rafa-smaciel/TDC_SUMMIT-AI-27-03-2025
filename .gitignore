@@ -19,16 +19,16 @@ tdc/
 *.json
 *.csv
 *.xml
-*.mp4
-*.avi
+# *.mp4
+# *.avi
 *.mov
 
 # Modelos
-*.pt
+# *.pt
 *.h5
 *.onnx
-runs/
-weights/
+# runs/
+# weights/
 checkpoints/
 
 # Arquivos do sistema
