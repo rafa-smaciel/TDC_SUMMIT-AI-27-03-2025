@@ -126,7 +126,7 @@ class LabelingApp(tk.Tk):
 
         # Exibe o logo na parte superior, se disponível
         try:
-            logo_img = Image.open("logo.png")
+            # logo_img = Image.open("logo.png")
             logo_img = logo_img.resize((200, 60), Image.Resampling.LANCZOS)
             self.logo_photo = ImageTk.PhotoImage(logo_img)
             logo_label = tk.Label(self.config_frame, image=self.logo_photo, bg="#2e2e2e")
@@ -502,54 +502,96 @@ class LabelingApp(tk.Tk):
             "F1 Score Curve": ("F1_curve.png", "Curva de F1 Score: Balanceia Precisão e Recall."),
             "Precision Curve": ("P_curve.png", "Curva de Precisão: Indica a proporção de verdadeiros positivos entre as predições positivas.")
         }
-        # Cria uma janela para exibir gráficos e o vídeo de teste lado a lado
+        
+        # Cria a janela principal e configura o grid para responsividade
         graph_win = tk.Toplevel(self)
         graph_win.title("Gráficos do Treinamento YOLO - Vega Robotics")
         graph_win.state("zoomed")
         graph_win.configure(bg="#2e2e2e")
-        # Frame à esquerda para os gráficos
-        left_frame = tk.Frame(graph_win, bg="#2e2e2e")
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        canvas = tk.Canvas(left_frame, bg="#2e2e2e")
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar = ttk.Scrollbar(left_frame, orient=tk.VERTICAL, command=canvas.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        graph_win.columnconfigure(0, weight=0)   # Sidebar (menu) – largura fixa
+        graph_win.columnconfigure(1, weight=1)   # Área de conteúdo – expande
+        graph_win.rowconfigure(0, weight=1)
+        
+        # Bind da tecla Esc para fechar o vídeo
+        graph_win.bind("<Escape>", lambda event: self.close_test_video())
+        
+        # Sidebar: menu lateral esquerdo com os botões
+        sidebar = tk.Frame(graph_win, bg="#3e3e3e", width=200)
+        sidebar.grid(row=0, column=0, sticky="ns")
+        sidebar.grid_propagate(False)  # Impede que o frame se redimensione com seu conteúdo
+        
+        btn_return = tk.Button(sidebar, text="Voltar ao Menu Inicial",
+                                command=lambda: [graph_win.destroy(), self.return_to_main_menu()],
+                                bg="#3e3e3e", fg="white", activebackground="#5a5a5a")
+        btn_return.pack(pady=10, fill=tk.X, padx=10)
+        
+        btn_run = tk.Button(sidebar, text="Rodar Vídeo Teste", command=self.run_test_video,
+                             bg="#3e3e3e", fg="white", activebackground="#5a5a5a")
+        btn_run.pack(pady=10, fill=tk.X, padx=10)
+        
+        # Botão para fechar o vídeo
+        btn_close = tk.Button(sidebar, text="Fechar Vídeo", command=self.close_test_video,
+                              bg="#3e3e3e", fg="white", activebackground="#5a5a5a")
+        btn_close.pack(pady=10, fill=tk.X, padx=10)
+        
+        # Área de conteúdo principal (coluna da direita)
+        main_content = tk.Frame(graph_win, bg="#2e2e2e")
+        main_content.grid(row=0, column=1, sticky="nsew")
+        main_content.columnconfigure(0, weight=1)
+        main_content.rowconfigure(0, weight=1)  # Área dos gráficos
+        main_content.rowconfigure(1, weight=1)  # Área do vídeo
+        
+        # Área dos gráficos (primeira linha) – Canvas scrollable para acomodar os gráficos responsivamente
+        graphs_frame = tk.Frame(main_content, bg="#2e2e2e")
+        graphs_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        graphs_frame.columnconfigure(0, weight=1)
+        graphs_frame.rowconfigure(0, weight=1)
+        
+        canvas = tk.Canvas(graphs_frame, bg="#2e2e2e")
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(graphs_frame, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
         canvas.configure(yscrollcommand=scrollbar.set)
-        frame = tk.Frame(canvas, bg="#2e2e2e")
-        canvas.create_window((0, 0), window=frame, anchor="nw")
+        
+        graphs_inner = tk.Frame(canvas, bg="#2e2e2e")
+        canvas.create_window((0, 0), window=graphs_inner, anchor="nw")
+        
         for title, (filename, explanation) in graph_files.items():
             file_path = os.path.join(exp_dir, filename)
-            tk.Label(frame, text=title, font=("Arial", 14, "bold"), bg="#2e2e2e", fg="white").pack(pady=5)
+            tk.Label(graphs_inner, text=title, font=("Arial", 14, "bold"),
+                     bg="#2e2e2e", fg="white").pack(pady=5)
             if os.path.exists(file_path):
                 img = Image.open(file_path)
+                # Define um tamanho máximo, permitindo redimensionamento e scroll se necessário
                 max_width, max_height = 800, 600
                 img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
-                lbl_img = tk.Label(frame, image=photo, borderwidth=2, relief="groove", bg="#2e2e2e")
+                lbl_img = tk.Label(graphs_inner, image=photo, borderwidth=2,
+                                   relief="groove", bg="#2e2e2e")
                 lbl_img.image = photo
                 lbl_img.pack(pady=5)
-                tk.Label(frame, text=explanation, wraplength=800, justify="left", bg="#2e2e2e", fg="white").pack(pady=5)
+                tk.Label(graphs_inner, text=explanation, wraplength=800, justify="left",
+                         bg="#2e2e2e", fg="white").pack(pady=5)
             else:
-                tk.Label(frame, text=f"Arquivo não encontrado: {filename}", bg="#2e2e2e", fg="white").pack(pady=5)
-        frame.update_idletasks()
+                tk.Label(graphs_inner, text=f"Arquivo não encontrado: {filename}",
+                         bg="#2e2e2e", fg="white").pack(pady=5)
+        
+        graphs_inner.update_idletasks()
         canvas.configure(scrollregion=canvas.bbox("all"))
-        # Frame à direita para exibir o vídeo de teste embutido
-        right_frame = tk.Frame(graph_win, bg="#2e2e2e")
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        tk.Label(right_frame, text="Vídeo Teste", font=("Arial", 14, "bold"), bg="#2e2e2e", fg="white").pack(pady=5)
-        self.test_video_label = tk.Label(right_frame, bg="black")
-        self.test_video_label.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        # Botões inferiores
-        button_frame = tk.Frame(graph_win, bg="#2e2e2e")
-        button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
-        tk.Button(button_frame, text="Voltar ao Menu Inicial", command=lambda: [graph_win.destroy(), self.return_to_main_menu()],
-                  bg="#3e3e3e", fg="white", activebackground="#5a5a5a").pack(side=tk.LEFT, padx=10)
-        tk.Button(button_frame, text="Rodar Vídeo Teste", command=self.run_test_video,
-                  bg="#3e3e3e", fg="white", activebackground="#5a5a5a").pack(side=tk.RIGHT, padx=10)
-        tk.Label(button_frame, text="Sugestão: Utilize o best.pt num vídeo teste.", font=("Arial", 10, "italic"),
-                 bg="#2e2e2e", fg="white").pack(pady=5)
+        
+        # Área do vídeo (segunda linha) – o vídeo ocupa todo o espaço disponível e é responsivo
+        video_frame = tk.Frame(main_content, bg="#2e2e2e")
+        video_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        video_frame.columnconfigure(0, weight=1)
+        video_frame.rowconfigure(1, weight=1)
+        
+        tk.Label(video_frame, text="Vídeo Teste", font=("Arial", 14, "bold"),
+                 bg="#2e2e2e", fg="white").grid(row=0, column=0, sticky="n", pady=5)
+        
+        self.test_video_label = tk.Label(video_frame, bg="black")
+        self.test_video_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        
         self.add_footer(graph_win)
-        # Armazena a janela de gráficos para uso na exibição do vídeo
         self.graph_win = graph_win
 
     # -----------------------------------------
@@ -652,7 +694,8 @@ class LabelingApp(tk.Tk):
             # Aguarda um pouco para controlar a taxa de atualização
             time.sleep(0.03)
         self.test_video_running = False
-        self.test_video_capture.release()
+        if self.test_video_capture is not None:
+            self.test_video_capture.release()
 
     def update_test_video_ui(self):
         """Atualiza a imagem do vídeo na interface (executado no loop principal via after)."""
@@ -662,6 +705,14 @@ class LabelingApp(tk.Tk):
             self.test_video_label.after(30, self.update_test_video_ui)
         else:
             self.test_video_label.configure(text="Vídeo finalizado.", image="")
+
+    def close_test_video(self):
+        """Método para fechar o vídeo, seja pelo botão ou pela tecla Esc."""
+        if self.test_video_running:
+            self.test_video_running = False
+            if self.test_video_capture is not None:
+                self.test_video_capture.release()
+            self.test_video_label.configure(text="Vídeo fechado.", image="")
 
 if __name__ == "__main__":
     app = LabelingApp()

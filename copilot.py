@@ -1,18 +1,18 @@
-import os
-import threading
-import time
-import queue
-import math
-import json
-import csv
-from datetime import datetime
-import pytz
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from PIL import Image, ImageTk  # Para manipulação de imagens
-import cv2
-from pymongo import MongoClient
-from ultralytics import YOLO
+import os                   # Permite interagir com o sistema operacional (ex: ler arquivos)
+import threading            # Permite criar e controlar múltiplas tarefas ao mesmo tempo
+import time                 # Funções para lidar com tempo, como pausas
+import queue                # Estrutura para organizar mensagens de forma segura entre threads
+import math                 # Funções matemáticas, como cálculo de distância
+import json                 # Trabalhar com dados em formato JSON
+import csv                  # Trabalhar com arquivos CSV
+from datetime import datetime  # Para lidar com datas e horários
+import pytz                 # Para trabalhar com fusos horários
+import tkinter as tk        # Biblioteca para criar interfaces gráficas (janelas)
+from tkinter import filedialog, messagebox  # Diálogos para escolher arquivos e exibir mensagens
+from PIL import Image, ImageTk  # Biblioteca para trabalhar com imagens e exibi-las na interface
+import cv2                  # Biblioteca OpenCV para processamento de vídeo/imagem
+from pymongo import MongoClient  # Conecta ao MongoDB, um banco de dados
+from ultralytics import YOLO  # Biblioteca para usar o modelo YOLO de detecção de objetos
 
 # ========================================================
 # ## 1. AGENTES - Integração com a interface via callback de log
@@ -20,8 +20,8 @@ from ultralytics import YOLO
 
 class BaseAgent(threading.Thread):
     """
-    Classe base para os agentes. Herda de threading.Thread e implementa
-    um ciclo de vida padrão (iniciar, escutar e parar).
+    Classe base para os agentes. Roda em paralelo com o programa principal.
+    Define o ciclo de vida: iniciar, escutar e parar.
     """
     def __init__(self, name, log_callback=None):
         super().__init__(daemon=True)
@@ -46,15 +46,14 @@ class BaseAgent(threading.Thread):
 
 class SupervisorAgent(BaseAgent):
     """
-    Agente Supervisor: Processa os eventos e, se o evento for 'Reprovado',
-    dispara um alerta crítico (através do alert_callback).
+    Agente Supervisor: Processa os eventos.
+    Se o evento for "Reprovado", dispara um alerta crítico.
     """
     def __init__(self, log_callback=None, alert_callback=None):
         super().__init__("Supervisor", log_callback)
         self.alert_callback = alert_callback
 
     def process_event(self, event):
-        # Se o evento for crítico (classe 'Reprovado'), dispara o alerta
         if event.get("classe") == "Reprovado":
             msg = f"[Supervisor] ⚠️ Evento CRÍTICO detectado: {event}"
             if self.alert_callback:
@@ -65,13 +64,13 @@ class SupervisorAgent(BaseAgent):
             self.log_callback(msg)
 
     def listen(self):
-        pass  # Atua apenas via callback (não há escuta contínua)
+        pass  # Atua apenas via callback
 
 
 class EventMonitorAgent(BaseAgent):
     """
-    Agente Monitor: Conecta ao MongoDB e verifica a coleção 'event_logs'
-    para detectar novos eventos. Quando detecta, chama o callback configurado.
+    Agente Monitor: Conecta ao MongoDB e monitora a coleção 'event_logs' 
+    para detectar novos eventos, chamando um callback para processá-los.
     """
     def __init__(self, callback, log_callback=None):
         super().__init__("Monitor", log_callback)
@@ -101,11 +100,8 @@ class EventMonitorAgent(BaseAgent):
 class VideoApp(tk.Tk):
     """
     Aplicativo principal que integra a interface gráfica com os agentes.
-    Possui:
-      - Painel de status para os agentes
-      - Área para exibição do vídeo e logs
-      - Botões para selecionar modelo, vídeo e executar a detecção
-      - Pop-up de alerta crítico com ícone PNG
+    Possui painel de status, exibição de vídeo e terminal para logs.
+    Também exibe alertas críticos com ícone.
     """
     def __init__(self):
         super().__init__()
@@ -114,7 +110,7 @@ class VideoApp(tk.Tk):
         self.state("zoomed")  # Abre a janela maximizada
 
         # ============================
-        # ### Configuração do Ícone da Janela
+        # Configuração do Ícone da Janela
         # ============================
         try:
             self.window_icon = ImageTk.PhotoImage(file="logo.png")
@@ -123,7 +119,7 @@ class VideoApp(tk.Tk):
             print("Erro ao carregar o ícone:", e)
 
         # ============================
-        # ### Inicialização de Filas e Variáveis
+        # Inicialização de Filas e Variáveis
         # ============================
         self.log_queue = queue.Queue()
         self.video_queue = queue.Queue()
@@ -133,7 +129,7 @@ class VideoApp(tk.Tk):
         self.loop_video = tk.BooleanVar(value=False)
 
         # ============================
-        # ### Conexão com o MongoDB
+        # Conexão com o MongoDB
         # ============================
         try:
             self.mongo_client = MongoClient("mongodb://localhost:27017/")
@@ -144,7 +140,7 @@ class VideoApp(tk.Tk):
             self.log(f"Erro ao conectar ao MongoDB: {e}")
 
         # ============================
-        # ### Configuração da Interface Principal
+        # Configuração da Interface Principal
         # ============================
         self.main_frame = tk.Frame(self, bg="#2e2e2e")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -153,14 +149,14 @@ class VideoApp(tk.Tk):
         self.menu_frame = tk.Frame(self.main_frame, width=300, bg="#3e3e3e")
         self.menu_frame.pack(side=tk.LEFT, fill=tk.Y)
 
-        # >>> Painel de Status dos Agentes <<<
+        # Painel de status dos agentes
         self.status_frame = tk.Frame(self.menu_frame, bg="#3e3e3e")
         self.status_frame.pack(pady=10, fill=tk.X, padx=20)
         status_title = tk.Label(self.status_frame, text="Status dos Agentes", bg="#3e3e3e",
                                 fg="white", font=("Arial", 12, "bold"))
         status_title.pack(anchor="w")
 
-        # --- Status do Supervisor ---
+        # Status do Supervisor
         self.supervisor_status_frame = tk.Frame(self.status_frame, bg="#3e3e3e")
         self.supervisor_status_frame.pack(anchor="w", pady=2)
         self.supervisor_canvas = tk.Canvas(self.supervisor_status_frame, width=12, height=12,
@@ -171,7 +167,7 @@ class VideoApp(tk.Tk):
                                          bg="#3e3e3e", fg="red", font=("Arial", 10))
         self.supervisor_label.pack(side=tk.LEFT)
 
-        # --- Status do Monitor ---
+        # Status do Monitor
         self.monitor_status_frame = tk.Frame(self.status_frame, bg="#3e3e3e")
         self.monitor_status_frame.pack(anchor="w", pady=2)
         self.monitor_canvas = tk.Canvas(self.monitor_status_frame, width=12, height=12,
@@ -235,8 +231,6 @@ class VideoApp(tk.Tk):
                                   bg="#3e3e3e", fg="white", activebackground="#5a5a5a")
         self.btn_hide.pack(pady=10, fill=tk.X, padx=20)
 
-        # ----- Nota: Botão de exportação removido conforme solicitado -----
-
         # ----- Área de Conteúdo: Vídeo e Terminal -----
         self.content_frame = tk.Frame(self.main_frame, bg="#2e2e2e")
         self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -252,13 +246,17 @@ class VideoApp(tk.Tk):
         self.terminal_text.pack(fill=tk.BOTH, expand=True)
         self.terminal_text.insert(tk.END, "[TERMINAL] Pronto para iniciar...\n")
         self.terminal_text.config(state=tk.DISABLED)
+        # Configura tags para cores:
+        self.terminal_text.tag_configure("orange", foreground="orange")
+        self.terminal_text.tag_configure("blue", foreground="blue")
+        self.terminal_text.tag_configure("green", foreground="green")
 
-        # ----- Inicia os ciclos de atualização -----
+        # Inicia os ciclos de atualização para os logs e vídeo
         self.after(100, self.process_log_queue)
         self.after(30, self.update_video)
 
         # ============================
-        # ### Instancia e inicia os Agentes
+        # Instancia e inicia os Agentes
         # ============================
         self.supervisor_agent = SupervisorAgent(log_callback=self.log,
                                                 alert_callback=self.show_critical_alert)
@@ -270,9 +268,11 @@ class VideoApp(tk.Tk):
     # ========================================================
     # ## 3. Métodos de Atualização e Logs
     # ========================================================
-
     def update_agent_status(self):
-        """Atualiza o status visual dos agentes (Supervisor e Monitor) no painel."""
+        """
+        Atualiza periodicamente o status dos agentes (Supervisor e Monitor) na interface,
+        mudando a cor e o texto para "Ativo" (verde) ou "Inativo" (vermelho).
+        """
         if hasattr(self, 'supervisor_agent'):
             if self.supervisor_agent.running:
                 self.supervisor_canvas.itemconfig(self.supervisor_circle, fill="lime", outline="lime")
@@ -290,20 +290,39 @@ class VideoApp(tk.Tk):
         self.after(1000, self.update_agent_status)
 
     def print_loop_state(self):
-        """Imprime o estado do loop do vídeo."""
+        """Exibe no console se o loop do vídeo está habilitado ou não."""
         print("Loop habilitado:", self.loop_video.get())
 
     def log(self, message):
-        """Adiciona mensagens à fila de logs para exibição no terminal."""
+        """
+        Adiciona uma mensagem à fila de logs.
+        O método 'process_log_queue' determinará a cor com base na origem:
+          - Mensagens com "[Monitor]" → laranja
+          - Mensagens com "[Supervisor]" → azul
+          - Outras mensagens → verde
+        """
         self.log_queue.put(message)
 
     def process_log_queue(self):
-        """Processa a fila de logs e atualiza o widget de terminal."""
+        """
+        Processa a fila de logs e atualiza a área de texto do terminal.
+        As mensagens são inseridas com uma tag correspondente:
+          - "[Monitor]" → "orange"
+          - "[Supervisor]" → "blue"
+          - Outras → "green"
+        """
         try:
             while True:
                 msg = self.log_queue.get_nowait()
                 self.terminal_text.config(state=tk.NORMAL)
-                self.terminal_text.insert(tk.END, msg + "\n")
+                # Verifica a origem da mensagem e escolhe a tag:
+                if "[Monitor]" in msg:
+                    tag = "orange"
+                elif "[Supervisor]" in msg:
+                    tag = "blue"
+                else:
+                    tag = "green"
+                self.terminal_text.insert(tk.END, msg + "\n", tag)
                 self.terminal_text.see(tk.END)
                 self.terminal_text.config(state=tk.DISABLED)
         except queue.Empty:
@@ -311,7 +330,10 @@ class VideoApp(tk.Tk):
         self.after(100, self.process_log_queue)
 
     def update_video(self):
-        """Atualiza a exibição do vídeo na interface a partir da fila de frames."""
+        """
+        Atualiza a exibição do vídeo na interface.
+        Verifica se há um novo frame na fila e atualiza a imagem no label do vídeo.
+        """
         try:
             while True:
                 imgtk = self.video_queue.get_nowait()
@@ -324,9 +346,8 @@ class VideoApp(tk.Tk):
     # ========================================================
     # ## 4. Métodos de Seleção e Execução
     # ========================================================
-
     def select_model(self):
-        """Permite ao usuário selecionar o modelo YOLO (.pt)."""
+        """Permite que o usuário escolha um arquivo de modelo YOLO (.pt)."""
         path = filedialog.askopenfilename(title="Selecione o Modelo YOLO",
                                           filetypes=[("Arquivos .pt", "*.pt")])
         if path:
@@ -335,7 +356,7 @@ class VideoApp(tk.Tk):
             self.log(f"Modelo selecionado: {os.path.basename(path)}")
 
     def select_video(self):
-        """Permite ao usuário selecionar um vídeo para processamento."""
+        """Permite que o usuário escolha um vídeo para processamento."""
         path = filedialog.askopenfilename(title="Selecione o Vídeo",
                                           filetypes=[("Vídeos", "*.mp4 *.avi *.mov")])
         if path:
@@ -344,7 +365,7 @@ class VideoApp(tk.Tk):
             self.log(f"Vídeo selecionado: {os.path.basename(path)}")
 
     def run_detection(self):
-        """Inicia o processo de detecção de objetos."""
+        """Inicia o processo de detecção de objetos no vídeo usando o modelo YOLO."""
         if not self.model_path or not self.video_path:
             messagebox.showerror("Erro", "Selecione o modelo e o vídeo primeiro.")
             return
@@ -462,9 +483,11 @@ class VideoApp(tk.Tk):
     # ========================================================
     # ## 5. Métodos de Interface: Ocultar/Restaurar e Alerta Crítico
     # ========================================================
-
     def hide_app(self):
-        """Oculta a interface principal e exibe uma pequena janela para restaurá-la."""
+        """
+        Oculta a interface principal e abre uma pequena janela que informa
+        que o usuário pode restaurar a aplicação pressionando ESC.
+        """
         self.withdraw()
         self.esc_listener = tk.Toplevel(self)
         self.esc_listener.overrideredirect(True)
@@ -477,55 +500,45 @@ class VideoApp(tk.Tk):
         self.esc_listener.focus_force()
 
     def show_app(self, event=None):
-        """Restaura a interface principal."""
+        """Restaura a interface principal se estiver oculta."""
         self.deiconify()
         if hasattr(self, "esc_listener"):
             self.esc_listener.destroy()
 
     def show_critical_alert(self, message):
         """
-        Exibe um pop-up de alerta crítico com um ícone PNG.
-        - Toca um beep (no Windows).
-        - Carrega e exibe o ícone 'alert_icon.png' no pop-up.
-        - O pop-up se auto-destroi após 3 segundos.
+        Exibe um alerta crítico em uma nova janela com um ícone.
+        Toca um beep para chamar a atenção.
+        A janela se fecha automaticamente após 3 segundos.
         """
-        # Toca um beep (Windows)
         try:
             import winsound
-            winsound.Beep(1000, 300)  # Frequência de 1000Hz por 300ms
+            winsound.Beep(1000, 300)
         except ImportError:
             self.log("winsound não disponível para alerta sonoro.")
         
-        # Cria o pop-up de alerta
         alert_win = tk.Toplevel(self)
         alert_win.title("Alerta Crítico")
         alert_win.geometry("300x100")
         alert_win.configure(bg="red")
         
-        # Tenta carregar o ícone PNG para o alerta
         try:
             alert_img = Image.open("alert_icon.png")
             alert_img = alert_img.resize((64, 64), Image.Resampling.LANCZOS)
             alert_photo = ImageTk.PhotoImage(alert_img)
-            # Exibe o ícone no pop-up
             icon_label = tk.Label(alert_win, image=alert_photo, bg="red")
-            icon_label.image = alert_photo  # Mantém uma referência para não ser coletado pelo garbage collector
+            icon_label.image = alert_photo
             icon_label.pack(pady=5)
         except Exception as e:
             self.log(f"Erro ao carregar 'alert_icon.png': {e}")
         
-        # Caso queira exibir também uma mensagem textual, pode-se incluir outro label abaixo do ícone
-        # Neste exemplo, optamos por não exibir texto adicional ("tire a pena").
-        
-        # Auto-destruição do pop-up após 3 segundos
         alert_win.after(3000, alert_win.destroy)
 
     # ========================================================
     # ## 6. Encerramento da Aplicação
     # ========================================================
-
     def on_close(self):
-        """Interrompe os agentes e encerra a aplicação."""
+        """Para os agentes em execução e encerra a aplicação."""
         self.monitor_agent.stop()
         self.supervisor_agent.stop()
         self.destroy()
