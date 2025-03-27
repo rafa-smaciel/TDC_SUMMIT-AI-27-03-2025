@@ -1,0 +1,5 @@
+train: C:\TDC\TDC - 27-03-25\output\train
+val: C:\TDC\TDC - 27-03-25\output\val
+test: C:\TDC\TDC - 27-03-25\output\test
+nc: 2
+names: ['Aprovado', 'Reprovado']

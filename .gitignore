@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+*.db
+*.bak
+
+# Ambientes virtuais
+venv/
+tdc/
+
+# Jupyter (caso use futuramente)
+.ipynb_checkpoints/
+
+# Dados
+*.json
+*.csv
+*.xml
+*.mp4
+*.avi
+*.mov
+
+# Modelos
+*.pt
+*.h5
+*.onnx
+runs/
+weights/
+checkpoints/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+*.swp
+
+# IDEs
+.vscode/
+.idea/
+*.code-workspace

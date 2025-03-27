@@ -1,0 +1,47 @@
+# Como ativar o ambiente virtual e instalar as dependências (Windows)
+
+Este guia explica como ativar seu ambiente virtual Python e instalar todas as dependências do projeto utilizando o terminal do Windows.
+
+---
+
+## ✅ Etapa 1: Acessar a pasta do projeto
+Abra o Prompt de Comando (CMD) e digite:
+
+```bash
+cd C:\TDC\TDC - 27-03-25
+```
+
+---
+
+## 🏠 Etapa 2: Ativar o ambiente virtual
+Se você já criou o ambiente virtual com:
+```bash
+python -m venv venv
+```
+
+Ative com:
+```bash
+venv\Scripts\activate
+```
+
+> Ao ativar corretamente, você verá algo como:
+>
+> `(venv) C:\TDC\TDC - 27-03-25>`
+
+---
+
+## 🚀 Etapa 3: Instalar as dependências
+Certifique-se de que existe um arquivo `requirements.txt` na pasta do projeto. Então rode:
+
+```bash
+pip install -r requirements.txt
+```
+
+O Python irá baixar e instalar todas as bibliotecas usadas no projeto:
+- opencv-python
+- pymongo
+- ultralytics
+- pillow
+- fastapi
+- uvicorn
+- pytz

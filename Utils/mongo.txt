@@ -1,0 +1,32 @@
+# Como iniciar o MongoDB no Windows (passo a passo)
+
+Este guia explica como testar a conexão com o MongoDB usando Python e o terminal do Windows.
+
+---
+
+## 🔄 Etapa Única: Testar a conexão com Python (modo interativo)
+
+1. Ative seu ambiente virtual:
+
+```bash
+cd C:\TDC\TDC - 27-03-25
+venv\Scripts\activate
+```
+
+2. Entre no Python:
+```bash
+python
+```
+
+3. Digite:
+```python
+from pymongo import MongoClient
+client = MongoClient("mongodb://localhost:27017/")
+print(client.list_database_names())
+```
+
+Se o MongoDB estiver rodando corretamente, você verá algo como:
+```
+['admin', 'config', 'local', 'tdc_workshop']
+```
+

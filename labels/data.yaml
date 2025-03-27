@@ -1,0 +1,4 @@
+train: C:/vegaimg
+val: C:/vegaimg
+nc: 2
+names: ['APROVADO', 'REPROVADO']
