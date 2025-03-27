@@ -87,4 +87,4 @@ Engenheiros de software, cientistas de dados, profissionais de automação indus
 
 Este projeto foi desenvolvido como parte de uma demonstração prática para integração de IA e automação industrial.
 
-> Sinta-se à vontade para clonar, adaptar e colaborar!
+> Sinta-se à vontade para clonar, adaptar e colaborar!!
