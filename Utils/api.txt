@@ -1,0 +1,100 @@
+============================
+✅ PASSO A PASSO: RODAR API
+============================
+
+🚀 Esta API serve os dados salvos no MongoDB usado pelo seu app com interface.
+
+----------------------------------------
+1. CRIE O ARQUIVO `api.py` NA RAIZ DO PROJETO
+----------------------------------------
+
+Conteúdo do arquivo `api.py`:
+
+----------------------------------------
+from fastapi import FastAPI
+from pymongo import MongoClient
+from bson import ObjectId
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(title="TDC API")
+
+# Permite acesso de qualquer origem (frontend etc.)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Conexão com MongoDB local
+client = MongoClient("mongodb://localhost:27017/")
+db = client["tdc_workshop"]
+collection = db["event_logs"]
+
+# Helper para converter ObjectId para string
+def serialize(evento):
+    evento["_id"] = str(evento["_id"])
+    return evento
+
+@app.get("/eventos")
+def listar_todos():
+    return [serialize(e) for e in collection.find()]
+
+@app.get("/eventos/reprovados")
+def listar_reprovados():
+    return [serialize(e) for e in collection.find({"classe": "Reprovado"})]
+
+@app.get("/eventos/aprovados")
+def listar_aprovados():
+    return [serialize(e) for e in collection.find({"classe": "Aprovado"})]
+
+----------------------------------------
+
+----------------------------------------
+2. INSTALE AS DEPENDÊNCIAS NECESSÁRIAS
+----------------------------------------
+
+Abra o terminal do VSCode (ou prompt) e digite:
+
+pip install fastapi uvicorn pymongo
+
+----------------------------------------
+3. EXECUTE A API
+----------------------------------------
+
+Ainda no terminal, execute:
+
+uvicorn api:app --reload
+
+Isso iniciará o servidor em:
+
+http://127.0.0.1:8000
+
+----------------------------------------
+4. ACESSE A DOCUMENTAÇÃO INTERATIVA
+----------------------------------------
+
+Abra o navegador e acesse:
+
+http://127.0.0.1:8000/docs
+
+Você verá os endpoints prontos para teste:
+
+- GET /eventos
+- GET /eventos/aprovados
+- GET /eventos/reprovados
+
+----------------------------------------
+5. DEIXE RODANDO ENQUANTO TESTA O APP
+----------------------------------------
+
+A API pode rodar em paralelo com a sua interface (interface.py).
+
+Ela vai servir os dados do mesmo MongoDB usado pelos agentes.
+
+----------------------------------------
+📁 DICA: COLOQUE ESSE ARQUIVO EM:
+C:\TDC\TDC - 27-03-25\como_rodar_api.txt
+----------------------------------------
+
